@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { CharizardWin, CharizardLoss } from './CharizardSvg'
+import { sfxVictory, sfxDefeat } from '../sounds'
 
 const STOCK_COLORS = ['#4a9eff', '#a855f7', '#34d399']
 
@@ -100,6 +101,8 @@ export default function ResultsScreen({ result, onReplay, onReset }) {
   const [showContent, setShowContent] = useState(false)
 
   useEffect(() => {
+    if (charizardWins) sfxVictory()
+    else sfxDefeat()
     const t = setTimeout(() => setShowContent(true), 1200)
     return () => clearTimeout(t)
   }, [])

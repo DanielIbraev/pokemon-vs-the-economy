@@ -2,6 +2,13 @@ from typing import Optional
 import requests
 import pandas as pd
 from datetime import datetime
+import time
+
+SESSION = requests.Session()
+SESSION.headers.update({
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+})
 
 
 def _fetch_yahoo_chart(ticker: str, period1: int, period2: int, interval: str = "1mo") -> Optional[dict]:
@@ -12,15 +19,25 @@ def _fetch_yahoo_chart(ticker: str, period1: int, period2: int, interval: str = 
         "interval": interval,
         "includePrePost": "false",
     }
-    headers = {"User-Agent": "Mozilla/5.0"}
-    resp = requests.get(url, params=params, headers=headers, timeout=10)
-    if resp.status_code != 200:
-        return None
-    data = resp.json()
-    result = data.get("chart", {}).get("result")
-    if not result:
-        return None
-    return result[0]
+
+    for attempt in range(3):
+        try:
+            resp = SESSION.get(url, params=params, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                result = data.get("chart", {}).get("result")
+                if result:
+                    return result[0]
+            if resp.status_code == 429:
+                time.sleep(1 + attempt)
+                continue
+            return None
+        except Exception:
+            if attempt < 2:
+                time.sleep(1)
+                continue
+            return None
+    return None
 
 
 def get_stock_prices(ticker: str, start: str, end: str) -> Optional[pd.DataFrame]:

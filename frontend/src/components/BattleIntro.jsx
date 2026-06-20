@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CharizardIcon } from './CharizardSvg'
+import { sfxAppear, sfxAttack } from '../sounds'
 
 const STOCK_COLORS = ['#4a9eff', '#a855f7', '#34d399']
 
@@ -23,9 +24,9 @@ export default function BattleIntro({ tickers, onDone }) {
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setStep(1), 400),
-      setTimeout(() => setStep(2), 1200),
-      setTimeout(() => setStep(3), 2200),
+      setTimeout(() => { setStep(1); sfxAppear() }, 400),
+      setTimeout(() => { setStep(2); sfxAppear() }, 1200),
+      setTimeout(() => { setStep(3); sfxAttack() }, 2200),
       setTimeout(() => setStep(4), 3000),
       setTimeout(() => onDone(), 3800),
     ]

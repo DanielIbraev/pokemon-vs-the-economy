@@ -1,10 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import LandingHero from './components/LandingHero'
 import InputForm from './components/InputForm'
 import BattleIntro from './components/BattleIntro'
 import AnimatedChart from './components/AnimatedChart'
 import ResultsScreen from './components/ResultsScreen'
+import PixelTransition from './components/PixelTransition'
 import { runBacktest } from './api'
+import { sfxSelect, sfxBattleStart, sfxVictory, sfxDefeat, startBgm, stopBgm } from './sounds'
 import './styles.css'
 
 const STOCK_COLORS = ['#4a9eff', '#a855f7', '#34d399']
@@ -14,7 +16,21 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [phase, setPhase] = useState('input')
-  const [pendingTickers, setPendingTickers] = useState([])
+  const [transition, setTransition] = useState(null) // null | 'to-battle' | 'to-chart' | 'to-results' | 'to-input'
+  const nextPhaseRef = useRef(null)
+
+  const doTransition = (transName, nextPhase) => {
+    nextPhaseRef.current = nextPhase
+    setTransition(transName)
+  }
+
+  const handleTransitionMidpoint = useCallback(() => {
+    if (nextPhaseRef.current) {
+      setPhase(nextPhaseRef.current)
+      nextPhaseRef.current = null
+    }
+    setTimeout(() => setTransition(null), 600)
+  }, [])
 
   const handleSubmit = async (params) => {
     setLoading(true)
@@ -23,8 +39,11 @@ export default function App() {
     try {
       const data = await runBacktest(params)
       setResult(data)
-      setPendingTickers(params.tickers)
-      setPhase('battle-intro')
+      sfxSelect()
+      setTimeout(() => {
+        sfxBattleStart()
+        doTransition('to-battle', 'battle-intro')
+      }, 200)
     } catch (err) {
       const msg = err.response?.data?.detail || 'Something went wrong. Check ticker and try again.'
       setError(msg)
@@ -34,30 +53,40 @@ export default function App() {
   }
 
   const handleBattleIntroDone = useCallback(() => {
-    setPhase('chart')
+    startBgm()
+    doTransition('to-chart', 'chart')
   }, [])
 
   const handleAnimationEnd = useCallback(() => {
     setTimeout(() => {
-      setPhase('chart-fade')
-      setTimeout(() => setPhase('results'), 800)
+      stopBgm()
+      doTransition('to-results', 'results')
     }, 1500)
   }, [])
 
   const handleReplay = useCallback(() => {
-    setPhase('battle-intro')
+    sfxBattleStart()
+    doTransition('to-battle', 'battle-intro')
   }, [])
 
   const handleReset = useCallback(() => {
+    sfxSelect()
+    doTransition('to-input', 'input')
     setResult(null)
-    setPhase('input')
     setError('')
   }, [])
 
   return (
     <div className="app">
-      {/* Scanline overlay */}
       <div className="scanlines" />
+
+      {transition && (
+        <PixelTransition
+          key={transition}
+          onMidpoint={handleTransitionMidpoint}
+          duration={1200}
+        />
+      )}
 
       {phase === 'input' && (
         <div className="fade-in">
@@ -76,8 +105,8 @@ export default function App() {
         />
       )}
 
-      {(phase === 'chart' || phase === 'chart-fade') && result && (
-        <div className={phase === 'chart-fade' ? 'slow-fade-out' : 'fade-in'}>
+      {phase === 'chart' && result && (
+        <div className="fade-in">
           <div className="chart-view">
             <h2 className="chart-title">
               <span className="gold">CHARIZARD</span>
@@ -101,14 +130,14 @@ export default function App() {
               key={result.tickers.join(',') + result.start}
               data={result.series}
               tickers={result.tickers}
-              onAnimationEnd={phase === 'chart' ? handleAnimationEnd : undefined}
+              onAnimationEnd={handleAnimationEnd}
             />
           </div>
         </div>
       )}
 
       {phase === 'results' && result && (
-        <div className="slow-fade-in">
+        <div className="fade-in">
           <ResultsScreen
             result={result}
             onReplay={handleReplay}
