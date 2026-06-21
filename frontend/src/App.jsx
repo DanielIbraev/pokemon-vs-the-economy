@@ -5,6 +5,7 @@ import BattleIntro from './components/BattleIntro'
 import AnimatedChart from './components/AnimatedChart'
 import ResultsScreen from './components/ResultsScreen'
 import PixelTransition from './components/PixelTransition'
+import Watermark from './components/Watermark'
 import { runBacktest } from './api'
 import { sfxSelect, sfxBattleStart, sfxVictory, sfxDefeat, startBgm, stopBgm } from './sounds'
 import './styles.css'
@@ -79,6 +80,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="scanlines" />
+      <Watermark />
 
       {transition && (
         <PixelTransition
