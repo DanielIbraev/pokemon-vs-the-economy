@@ -194,11 +194,18 @@ def backtest(
 
 
 if DIST_DIR.exists():
-    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+    assets_dir = DIST_DIR / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
+        if full_path.startswith("api"):
+            return {"error": "Not found"}
         file = DIST_DIR / full_path
         if file.exists() and file.is_file():
             return FileResponse(file)
-        return FileResponse(DIST_DIR / "index.html")
+        index = DIST_DIR / "index.html"
+        if index.exists():
+            return FileResponse(index)
+        return {"error": "Frontend not built"}

@@ -43,7 +43,7 @@ def _try_yahoo_raw(ticker, start, end):
 
 def _try_yfinance(ticker, start, end):
     try:
-        import yfinance as yf
+        import yfinance as yf  # noqa
         stock = yf.Ticker(ticker)
         hist = stock.history(start=start, end=end, interval="1mo")
         if hist.empty:
