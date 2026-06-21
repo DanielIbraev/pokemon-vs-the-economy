@@ -92,6 +92,16 @@ def backtest(
 
     charizard_df = get_charizard_prices(start, end)
 
+    # Normalize all date columns to the same dtype to avoid merge errors
+    def normalize_dates(df):
+        df = df.copy()
+        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None).astype("datetime64[ms]")
+        return df
+
+    charizard_df = normalize_dates(charizard_df)
+    for t in stock_dfs:
+        stock_dfs[t] = normalize_dates(stock_dfs[t])
+
     base_df = list(stock_dfs.values())[0][["date"]].copy()
     merged = base_df.sort_values("date")
 
