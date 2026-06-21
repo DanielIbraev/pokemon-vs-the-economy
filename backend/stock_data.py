@@ -3,32 +3,32 @@ import requests
 import pandas as pd
 import os
 
-API_KEY = os.environ.get("FMP_API_KEY", "demo")
-BASE_URL = "https://financialmodelingprep.com/api/v3"
+API_KEY = os.environ.get("TWELVEDATA_API_KEY", "demo")
+BASE_URL = "https://api.twelvedata.com"
 
 
 def get_stock_prices(ticker: str, start: str, end: str) -> Optional[pd.DataFrame]:
     try:
-        url = f"{BASE_URL}/historical-price-full/{ticker}"
-        params = {"from": start, "to": end, "apikey": API_KEY}
-        resp = requests.get(url, params=params, timeout=15)
+        resp = requests.get(f"{BASE_URL}/time_series", params={
+            "symbol": ticker,
+            "interval": "1month",
+            "start_date": start,
+            "end_date": end,
+            "apikey": API_KEY,
+            "format": "JSON",
+            "outputsize": 5000,
+        }, timeout=15)
         if resp.status_code != 200:
             return None
         data = resp.json()
-        historical = data.get("historical", [])
-        if not historical:
+        if data.get("status") == "error" or "values" not in data:
             return None
 
-        df = pd.DataFrame(historical)
-        df["date"] = pd.to_datetime(df["date"])
-        df = df.rename(columns={"close": "price"})
-        df = df.sort_values("date")
-
-        df["month"] = df["date"].dt.to_period("M")
-        df = df.groupby("month").last().reset_index()
-        df["date"] = df["month"].dt.to_timestamp()
-        df = df[["date", "price"]]
-
+        values = data["values"]
+        df = pd.DataFrame(values)
+        df["date"] = pd.to_datetime(df["datetime"])
+        df["price"] = df["close"].astype(float)
+        df = df[["date", "price"]].sort_values("date").reset_index(drop=True)
         return df
     except Exception:
         return None
@@ -36,24 +36,16 @@ def get_stock_prices(ticker: str, start: str, end: str) -> Optional[pd.DataFrame
 
 def get_earliest_date(ticker: str) -> Optional[str]:
     try:
-        url = f"{BASE_URL}/historical-price-full/{ticker}"
-        params = {"apikey": API_KEY, "from": "1990-01-01", "to": "1995-01-01"}
-        resp = requests.get(url, params=params, timeout=15)
+        resp = requests.get(f"{BASE_URL}/earliest_timestamp", params={
+            "symbol": ticker,
+            "interval": "1month",
+            "apikey": API_KEY,
+        }, timeout=15)
         if resp.status_code != 200:
-            url2 = f"{BASE_URL}/historical-price-full/{ticker}"
-            params2 = {"apikey": API_KEY}
-            resp2 = requests.get(url2, params=params2, timeout=15)
-            if resp2.status_code != 200:
-                return None
-            data = resp2.json()
-        else:
-            data = resp.json()
-
-        historical = data.get("historical", [])
-        if not historical:
             return None
-
-        dates = sorted([h["date"] for h in historical])
-        return dates[0]
+        data = resp.json()
+        if "datetime" not in data:
+            return None
+        return data["datetime"]
     except Exception:
         return None
