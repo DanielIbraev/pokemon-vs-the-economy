@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import math
 
-from stock_data import get_stock_prices, get_earliest_date
+from stock_data import get_stock_prices
 from pokemon_data import get_charizard_prices, EARLIEST_DATE
 
 app = FastAPI(title="Pokemon vs Stocks Backtester")
@@ -83,14 +83,9 @@ def backtest(
 
     stock_dfs = {}
     for ticker in ticker_list:
-        earliest = get_earliest_date(ticker)
-        if earliest is None:
-            raise HTTPException(404, f"Ticker '{ticker}' not found")
-        if start_dt < pd.Timestamp(earliest):
-            raise HTTPException(400, f"Data for {ticker} not available before {earliest}. Try a later start date.")
         df = get_stock_prices(ticker, start, end)
         if df is None or df.empty:
-            raise HTTPException(404, f"No price data found for '{ticker}'")
+            raise HTTPException(404, f"No price data found for '{ticker}'. Check the ticker symbol or try a different date range.")
         stock_dfs[ticker] = df
 
     charizard_df = get_charizard_prices(start, end)
