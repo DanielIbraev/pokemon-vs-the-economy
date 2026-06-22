@@ -19,31 +19,35 @@ const PROJECT_INFO = {
 
 function PixelAvatar() {
   return (
-    <div style={{ animation: 'pixelBounce 1.2s steps(2) infinite' }}>
-      <svg viewBox="0 0 16 16" style={{ width: 28, height: 28, imageRendering: 'pixelated' }}>
-        {/* Hair */}
-        <rect x="5" y="1" width="6" height="2" fill="#f0a030" />
-        {/* Head */}
-        <rect x="4" y="3" width="8" height="2" fill="#e8c070" />
-        {/* Eyes */}
-        <rect x="5" y="3" width="2" height="1" fill="#0a0a14" />
-        <rect x="9" y="3" width="2" height="1" fill="#0a0a14" />
-        {/* Mouth */}
-        <rect x="7" y="4" width="2" height="1" fill="#c09050" />
-        {/* Neck */}
-        <rect x="6" y="5" width="4" height="1" fill="#e8c070" />
-        {/* Shirt */}
-        <rect x="4" y="6" width="8" height="4" fill="#4a9eff" />
-        {/* Arms */}
-        <rect x="3" y="6" width="1" height="3" fill="#e8c070" />
-        <rect x="12" y="6" width="1" height="3" fill="#e8c070" />
-        {/* Pants */}
-        <rect x="5" y="10" width="6" height="3" fill="#333" />
-        {/* Legs */}
-        <rect x="5" y="13" width="2" height="2" fill="#555" />
-        <rect x="9" y="13" width="2" height="2" fill="#555" />
-      </svg>
-    </div>
+    <svg viewBox="0 0 18 16" style={{ width: 32, height: 28, imageRendering: 'pixelated' }}>
+      {/* Hair */}
+      <rect x="5" y="1" width="6" height="2" fill="#f0a030" />
+      {/* Head */}
+      <rect x="4" y="3" width="8" height="2" fill="#e8c070" />
+      {/* Eyes */}
+      <rect x="5" y="3" width="2" height="1" fill="#0a0a14" />
+      <rect x="9" y="3" width="2" height="1" fill="#0a0a14" />
+      {/* Mouth */}
+      <rect x="7" y="4" width="2" height="1" fill="#c09050" />
+      {/* Neck */}
+      <rect x="6" y="5" width="4" height="1" fill="#e8c070" />
+      {/* Shirt */}
+      <rect x="4" y="6" width="8" height="4" fill="#4a9eff" />
+      {/* Left arm static */}
+      <rect x="3" y="6" width="1" height="3" fill="#e8c070" />
+      {/* Right arm waving */}
+      <rect x="12" y="5" width="1" height="2" fill="#e8c070">
+        <animate attributeName="y" dur="0.8s" repeatCount="indefinite" values="5;4;5" calcMode="discrete" />
+      </rect>
+      <rect x="13" y="4" width="1" height="1" fill="#e8c070">
+        <animate attributeName="y" dur="0.8s" repeatCount="indefinite" values="4;3;4" calcMode="discrete" />
+      </rect>
+      {/* Pants */}
+      <rect x="5" y="10" width="6" height="3" fill="#333" />
+      {/* Legs */}
+      <rect x="5" y="13" width="2" height="2" fill="#555" />
+      <rect x="9" y="13" width="2" height="2" fill="#555" />
+    </svg>
   )
 }
 

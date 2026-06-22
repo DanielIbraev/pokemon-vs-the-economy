@@ -7,7 +7,18 @@ const VG = '#48a848', VD = '#306830', VF = '#e05060', VB = '#70c870', VS = '#58b
 // Blastoise colors
 const BL = '#5888c0', BD = '#3860a0', BB = '#e8d8a0', BC = '#78a8d8', BN = '#a06830'
 
+const K = '#222' // outline color
+
 function PixelGrid({ pixels, viewBox, size, glow, style = {} }) {
+  const filled = new Set(pixels.map(p => `${p.x},${p.y}`))
+  const outlines = new Set()
+  pixels.forEach(p => {
+    ;[[-1,0],[1,0],[0,-1],[0,1]].forEach(([dx,dy]) => {
+      const nx = p.x+dx, ny = p.y+dy
+      if (!filled.has(`${nx},${ny}`)) outlines.add(`${nx},${ny}`)
+    })
+  })
+
   return (
     <svg viewBox={viewBox} style={{
       width: size, height: size * 0.68,
@@ -15,6 +26,10 @@ function PixelGrid({ pixels, viewBox, size, glow, style = {} }) {
       filter: glow ? `drop-shadow(0 0 20px ${glow})` : 'none',
       ...style,
     }}>
+      {[...outlines].map((key, i) => {
+        const [x,y] = key.split(',').map(Number)
+        return <rect key={`o${i}`} x={x*6} y={y*6} width={6} height={6} fill={K} />
+      })}
       {pixels.map((p, i) => (
         <rect key={i} x={p.x * 6} y={p.y * 6} width={6} height={6} fill={p.c} />
       ))}
