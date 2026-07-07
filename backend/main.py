@@ -7,20 +7,36 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import math
+import re
+import os
 
 from stock_data import get_stock_prices
 from pokemon_data import get_pokemon_prices, EARLIEST_DATE, AVAILABLE_POKEMON, POKEMON_CARDS
 from inflation import adjust_for_inflation
 from montecarlo import run_monte_carlo
 
-app = FastAPI(title="Pokemon vs Stocks Backtester")
+app = FastAPI(title="Pokemon vs Stocks Backtester", docs_url=None, redoc_url=None)
+
+# Lock CORS to same-origin in production; allow localhost for dev
+_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:5173,http://localhost:8000",
+    ).split(",")
+    if o.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+# Input validation patterns
+_TICKER_RE = re.compile(r"^[A-Z0-9.\-]{1,10}$")
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 DIST_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 
@@ -69,25 +85,39 @@ def list_pokemon():
 @app.get("/api/backtest")
 def backtest(
     tickers: str = Query(..., description="Comma-separated ticker symbols"),
-    amount: float = Query(..., gt=0, description="Investment amount in USD"),
+    amount: float = Query(..., gt=0, le=1_000_000_000, description="Investment amount in USD"),
     start: str = Query(..., description="Start date YYYY-MM-DD"),
     end: str = Query(..., description="End date YYYY-MM-DD"),
-    dca: Optional[float] = Query(None, ge=0, description="Monthly DCA amount (0 or null for lump sum)"),
+    dca: Optional[float] = Query(None, ge=0, le=1_000_000, description="Monthly DCA amount (0 or null for lump sum)"),
     pokemon: str = Query("charizard", description="Pokemon card ID"),
 ):
+    # Validate pokemon (allowlist)
     if pokemon not in POKEMON_CARDS:
-        raise HTTPException(400, f"Unknown pokemon '{pokemon}'. Available: {list(POKEMON_CARDS.keys())}")
+        raise HTTPException(400, "Unknown pokemon")
 
     pokemon_name = POKEMON_CARDS[pokemon]["name"]
 
-    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
-    if not ticker_list:
+    # Validate and sanitize tickers
+    raw_tickers = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    if not raw_tickers:
         raise HTTPException(400, "At least one ticker is required")
-    if len(ticker_list) > 3:
+    if len(raw_tickers) > 3:
         raise HTTPException(400, "Maximum 3 tickers allowed")
+    ticker_list = []
+    for t in raw_tickers:
+        if not _TICKER_RE.match(t):
+            raise HTTPException(400, f"Invalid ticker symbol: '{t}'")
+        ticker_list.append(t)
 
-    start_dt = pd.Timestamp(start)
-    end_dt = pd.Timestamp(end)
+    # Validate date format strictly
+    if not _DATE_RE.match(start) or not _DATE_RE.match(end):
+        raise HTTPException(400, "Dates must be in YYYY-MM-DD format")
+
+    try:
+        start_dt = pd.Timestamp(start)
+        end_dt = pd.Timestamp(end)
+    except Exception:
+        raise HTTPException(400, "Invalid date value")
 
     if start_dt < pd.Timestamp(EARLIEST_DATE):
         raise HTTPException(400, f"Start date cannot be before {EARLIEST_DATE}")
@@ -231,11 +261,16 @@ if DIST_DIR.exists():
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         if full_path.startswith("api"):
-            return {"error": "Not found"}
-        file = DIST_DIR / full_path
-        if file.exists() and file.is_file():
-            return FileResponse(file)
+            raise HTTPException(404, "Not found")
+        # Resolve and verify the path stays inside DIST_DIR (prevents path traversal)
+        try:
+            resolved = (DIST_DIR / full_path).resolve()
+            resolved.relative_to(DIST_DIR.resolve())
+        except (ValueError, Exception):
+            raise HTTPException(400, "Invalid path")
+        if resolved.exists() and resolved.is_file():
+            return FileResponse(resolved)
         index = DIST_DIR / "index.html"
         if index.exists():
             return FileResponse(index)
-        return {"error": "Frontend not built"}
+        raise HTTPException(503, "Frontend not built")

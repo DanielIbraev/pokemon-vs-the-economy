@@ -9,4 +9,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
+      - key: TWELVEDATA_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
     plan: free
